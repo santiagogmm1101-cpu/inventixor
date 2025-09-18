@@ -1,0 +1,2 @@
+# inventixor
+SISTEMA DE INVENTARIOS
