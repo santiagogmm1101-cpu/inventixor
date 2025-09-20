@@ -2,9 +2,11 @@
 // script para insertar los usuarios iniciales en la tabla Users
 // Ejecutar desde la raíz del proyecto: php insert_users.php
 
-require_once 'app/helpers/Database.php';
+require_once 'config/db.php';
 
 function insertarUsuarios($conn) {
+    // Eliminar usuarios previos para evitar duplicados y problemas de contraseña
+    $conn->query("DELETE FROM Users WHERE correo IN ('administrador', 'coordinador', 'auxiliar')");
     $usuarios = [
         [
             'num_doc' => 1001,
@@ -12,7 +14,7 @@ function insertarUsuarios($conn) {
             'apellidos' => 'Administrador',
             'nombres' => 'Admin',
             'telefono' => 3001111111,
-            'correo' => 'admin',
+            'correo' => 'administrador',
             'cargo' => 'Administrador',
             'rol' => 'admin',
             'contrasena' => password_hash('admin123', PASSWORD_DEFAULT)
@@ -55,6 +57,5 @@ function insertarUsuarios($conn) {
     }
 }
 
-$db = new Database();
-insertarUsuarios($db->conn);
+insertarUsuarios($conn);
 ?>

@@ -1,20 +1,19 @@
 <?php
 // app/models/User.php
-require_once 'app/helpers/Database.php';
+require_once __DIR__ . '/../../config/db.php';
 
 class User {
-    private $db;
-    public function __construct() {
-        $this->db = (new Database())->conn;
-    }
     public function login($username, $password) {
-        $sql = "SELECT * FROM Users WHERE correo = ?";
-        $stmt = $this->db->prepare($sql);
-        $stmt->bind_param('s', $username);
+        global $conn;
+    $sql = "SELECT * FROM Users WHERE LOWER(correo) = ?";
+    $stmt = $conn->prepare($sql);
+    $correo = strtolower(trim($username));
+    $stmt->bind_param('s', $correo);
         $stmt->execute();
         $result = $stmt->get_result();
         if ($row = $result->fetch_assoc()) {
-            if (password_verify($password, $row['contrasena'])) {
+            // Si la contraseña está encriptada, usar password_verify
+            if (password_verify($password, $row['contrasena']) || $password === $row['contrasena']) {
                 return $row;
             }
         }
