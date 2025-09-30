@@ -8,7 +8,11 @@ class AuthController {
             $user = new User();
             $login = $user->login($_POST['username'], $_POST['password']);
             if ($login) {
-                $_SESSION['user'] = $login;
+                // Guardar solo nombre y rol en sesión
+                $_SESSION['user'] = [
+                    'nombres' => $login['nombres'],
+                    'rol' => $login['rol']
+                ];
                 header('Location: dashboard.php');
                 exit;
             } else {

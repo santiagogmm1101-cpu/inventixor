@@ -1,17 +1,42 @@
+
 <?php
 // categorias.php
+session_start();
 require_once 'app/helpers/Database.php';
 $db = new Database();
+$showReportBtn = true;
+if ($showReportBtn) {
+    echo '<div class="text-end mb-3"><a href="reportes.php?tabla=categorias" class="btn btn-primary">Reportes de categorías</a></div>';
+}
+// Asegurar que $_SESSION['rol'] esté definido
+if (!isset($_SESSION['rol'])) {
+    if (isset($_SESSION['user'])) {
+        $num_doc = $_SESSION['user'];
+        $rolRes = $db->conn->query("SELECT rol FROM Users WHERE num_doc = '$num_doc'");
+        if ($rolRes && $rolRow = $rolRes->fetch_assoc()) {
+            $_SESSION['rol'] = $rolRow['rol'];
+        } else {
+            $_SESSION['rol'] = '';
+        }
+    } else {
+        $_SESSION['rol'] = '';
+    }
+}
 
 // Eliminar categoría
 if (isset($_GET['eliminar'])) {
-    $id = intval($_GET['eliminar']);
-    $stmt = $db->conn->prepare("DELETE FROM Categoria WHERE id_categ = ?");
-    $stmt->bind_param('i', $id);
-    $stmt->execute();
-    $stmt->close();
-    header('Location: categorias.php');
-    exit;
+    $id_categoria = intval($_GET['eliminar']);
+    $subcats = $db->conn->query("SELECT COUNT(*) FROM Subcategoria WHERE id_categ = $id_categoria");
+    if ($subcats->fetch_row()[0] > 0) {
+        $errorMsg = "No se puede eliminar la categoría porque tiene subcategorías asociadas.";
+    } else {
+        $stmt = $db->conn->prepare("DELETE FROM Categoria WHERE id_categ=?");
+        $stmt->bind_param('i', $id_categoria);
+        $stmt->execute();
+        $stmt->close();
+        header('Location: categorias.php');
+        exit;
+    }
 }
 
 // Modificar categoría
@@ -41,6 +66,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['crear_categoria'])) {
 
 // Filtrar categorías
 $filtro = '';
+// Context for the main content
 if (isset($_GET['filtro']) && $_GET['filtro'] !== '') {
     $filtro = $_GET['filtro'];
     $sql = "SELECT id_categ, nombre, descripcion FROM Categoria WHERE nombre LIKE ?";
@@ -72,152 +98,348 @@ if (isset($_GET['modificar'])) {
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <title>Categorías</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestión de Categorías - Inventixor</title>
+    <!-- Bootstrap CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Font Awesome -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="public/css/style.css">
+    
     <style>
+        :root {
+            --primary-color: #667eea;
+            --secondary-color: #764ba2;
+            --sidebar-width: 280px;
+        }
+        
         body {
-            min-height: 100vh;
-            background: linear-gradient(120deg, #e3e6e8 0%, #cfd8dc 100%);
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f8f9fa;
         }
-        .container {
-            background: #f7f9fa;
-            border-radius: 14px;
-            box-shadow: 0 4px 18px rgba(60,72,88,0.10);
-            padding: 40px 32px;
-            max-width: 900px;
-            position: relative;
-            z-index: 1;
+        
+        .sidebar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            height: 100vh;
+            width: var(--sidebar-width);
+            background: linear-gradient(180deg, var(--primary-color) 0%, var(--secondary-color) 100%);
+            color: white;
+            z-index: 1000;
+            overflow-y: auto;
         }
-        h2 {
-            color: #263238;
-            font-weight: 700;
-            letter-spacing: 1px;
-            margin-bottom: 32px;
+        
+        .sidebar-header {
+            padding: 1.5rem;
+            text-align: center;
+            border-bottom: 1px solid rgba(255,255,255,0.2);
         }
-        .btn {
-            border-radius: 8px;
-            font-weight: 500;
-            box-shadow: none;
+        
+        .sidebar-menu {
+            padding: 0;
+            margin: 0;
+            list-style: none;
         }
-        .btn-success {
-            background: #388e3c;
-            border: none;
+        
+        .menu-item {
+            border-bottom: 1px solid rgba(255,255,255,0.1);
         }
-        .btn-primary {
-            background: #1976d2;
-            border: none;
+        
+        .menu-link {
+            display: block;
+            padding: 1rem 1.5rem;
+            color: white;
+            text-decoration: none;
+            transition: all 0.3s;
         }
-        .btn-warning {
-            background: #ffa000;
-            border: none;
-            color: #fff;
+        
+        .menu-link:hover {
+            background: rgba(255,255,255,0.1);
+            color: white;
+            padding-left: 2rem;
         }
-        .btn-danger {
-            background: #d32f2f;
-            border: none;
+        
+        .menu-link.active {
+            background: rgba(255,255,255,0.2);
         }
-        .btn-secondary {
-            background: #455a64;
-            border: none;
+        
+        .main-content {
+            margin-left: var(--sidebar-width);
+            padding: 2rem;
         }
-        .table {
-            background: #eceff1;
+        
+        .main-header {
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+            color: white;
+            padding: 2rem 0;
+            margin-bottom: 2rem;
+            border-radius: 15px;
+        }
+        
+        .stats-card {
+            background: white;
+            border-radius: 10px;
+            padding: 1.5rem;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            transition: all 0.3s ease;
+        }
+        
+        .stats-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+        }
+        
+        .filter-card {
+            background: white;
+            border-radius: 10px;
+            padding: 1.5rem;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            margin-bottom: 2rem;
+        }
+        
+        .table-card {
+            background: white;
             border-radius: 10px;
             overflow: hidden;
-            margin-top: 16px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
         }
-        thead th {
-            background: #b0bec5;
-            color: #263238;
-            font-size: 1.05rem;
-            font-weight: 600;
+        
+        .btn-action {
+            margin: 0 2px;
+            padding: 0.25rem 0.5rem;
         }
-        tbody tr {
-            transition: background 0.2s;
+        
+        .animate-fade-in {
+            animation: fadeIn 0.6s ease-in;
         }
-        tbody tr:hover {
-            background: #cfd8dc;
-        }
-        .form-control {
-            border-radius: 8px;
-            box-shadow: none;
-        }
-        #formCrear, .mb-3 > form {
-            background: #eceff1;
-            border-radius: 10px;
-            padding: 16px;
-            box-shadow: 0 2px 8px rgba(25,118,210,0.08);
-        }
-        .mb-3.d-flex {
-            margin-bottom: 24px !important;
-        }
-        @media (max-width: 900px) {
-            .container {
-                padding: 24px 8px;
-            }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
         }
     </style>
 </head>
 <body>
-<div class="container mt-5">
-    <div class="d-flex justify-content-end mb-3">
-        <a href="dashboard.php" class="btn btn-secondary">Menú principal</a>
+    <!-- Sidebar -->
+    <div class="sidebar">
+        <div class="sidebar-header">
+            <h3><i class="fas fa-boxes"></i> Inventixor</h3>
+            <p class="mb-0">Sistema de Inventario</p>
+        </div>
+        
+        <ul class="sidebar-menu">
+            <li class="menu-item">
+                <a href="dashboard.php" class="menu-link">
+                    <i class="fas fa-tachometer-alt me-2"></i> Dashboard
+                </a>
+            </li>
+            <li class="menu-item">
+                <a href="productos.php" class="menu-link">
+                    <i class="fas fa-box me-2"></i> Productos
+                </a>
+            </li>
+            <li class="menu-item">
+                <a href="categorias.php" class="menu-link active">
+                    <i class="fas fa-tags me-2"></i> Categorías
+                </a>
+            </li>
+            <li class="menu-item">
+                <a href="subcategorias.php" class="menu-link">
+                    <i class="fas fa-tag me-2"></i> Subcategorías
+                </a>
+            </li>
+            <li class="menu-item">
+                <a href="proveedores.php" class="menu-link">
+                    <i class="fas fa-truck me-2"></i> Proveedores
+                </a>
+            </li>
+            <li class="menu-item">
+                <a href="salidas.php" class="menu-link">
+                    <i class="fas fa-sign-out-alt me-2"></i> Salidas
+                </a>
+            </li>
+            <li class="menu-item">
+                <a href="reportes.php" class="menu-link">
+                    <i class="fas fa-chart-bar me-2"></i> Reportes
+                </a>
+            </li>
+            <li class="menu-item">
+                <a href="alertas.php" class="menu-link">
+                    <i class="fas fa-exclamation-triangle me-2"></i> Alertas
+                </a>
+            </li>
+            <li class="menu-item">
+                <a href="usuarios.php" class="menu-link">
+                    <i class="fas fa-users me-2"></i> Usuarios
+                </a>
+            </li>
+            <li class="menu-item">
+                <a href="ia_ayuda.php" class="menu-link">
+                    <i class="fas fa-robot me-2"></i> Asistente IA
+                </a>
+            </li>
+            <li class="menu-item">
+                <a href="logout.php" class="menu-link">
+                    <i class="fas fa-sign-out-alt me-2"></i> Cerrar Sesión
+                </a>
+            </li>
+        </ul>
     </div>
-    <h2 class="mb-4 text-center">Gestión de Categorías</h2>
-    <!-- Formulario de creación -->
-    <?php if($editCategoria): ?>
-    <div class="mb-3">
-        <form method="POST" class="d-flex gap-2 align-items-end">
-            <input type="hidden" name="id_categ" value="<?= $editCategoria['id_categ'] ?>">
-            <input type="text" name="nombre" class="form-control" value="<?= htmlspecialchars($editCategoria['nombre']) ?>" required style="max-width:200px;">
-            <input type="text" name="descripcion" class="form-control" value="<?= htmlspecialchars($editCategoria['descripcion']) ?>" required style="max-width:300px;">
-            <button type="submit" name="modificar_categoria" class="btn btn-warning">Actualizar</button>
-            <a href="categorias.php" class="btn btn-secondary">Cancelar</a>
-        </form>
-    </div>
-    <?php endif; ?>
-    <div class="mb-3 d-flex gap-2">
-        <input type="text" id="filtroInput" class="form-control w-auto" placeholder="Filtrar por nombre" style="max-width:200px;" value="<?= htmlspecialchars($filtro) ?>">
-        <button class="btn btn-primary" onclick="window.location.href='categorias.php?filtro='+document.getElementById('filtroInput').value">Filtrar</button>
-    </div>
-    <table class="table table-bordered">
-        <thead>
-            <tr>
-                <th>Nombre</th>
-                <th>Descripción</th>
-                <th>Acciones</th>
-            </tr>
-        </thead>
-        <tbody>
-        <?php while($row = $result->fetch_assoc()): ?>
-            <tr>
-                <td><?= htmlspecialchars($row['nombre']) ?></td>
-                <td><?= htmlspecialchars($row['descripcion']) ?></td>
-                <td>
-                    <a href="categorias.php?modificar=<?= $row['id_categ'] ?>" class="btn btn-warning btn-sm">Modificar</a>
-                    <a href="categorias.php?eliminar=<?= $row['id_categ'] ?>" class="btn btn-danger btn-sm" onclick="return confirm('¿Seguro que deseas eliminar esta categoría?')">Eliminar</a>
-                </td>
-            </tr>
-        <?php endwhile; ?>
-        </tbody>
-    </table>
-    <div class="mt-4 text-center">
-        <button class="btn btn-success mb-3" id="btnMostrarFormCat">Crear nueva categoría</button>
-        <form method="POST" id="formCrearCat" class="p-4 rounded shadow-sm bg-white mx-auto" style="max-width: 600px; display:none;">
-            <h4 class="mb-3 text-center" style="color:#1976d2;font-weight:600;">Crear nueva categoría</h4>
-            <div class="mb-3">
-                <label for="nombreCat" class="form-label">Nombre</label>
-                <input type="text" name="nombre" id="nombreCat" class="form-control" placeholder="Nombre de la categoría" required maxlength="100">
+
+    <!-- Main Content -->
+    <div class="main-content">
+        <!-- Header -->
+        <div class="main-header">
+            <div class="container-fluid">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h2><i class="fas fa-tags me-2"></i>Gestión de Categorías</h2>
+                        <p class="mb-0">Administra las categorías de productos</p>
+                    </div>
+                    <div class="d-flex align-items-center gap-3">
+                        <span class="badge bg-light text-dark">
+                            Rol: <?= htmlspecialchars($_SESSION['rol']??'') ?>
+                        </span>
+                    </div>
+                </div>
             </div>
-            <div class="mb-3">
-                <label for="descripcionCat" class="form-label">Descripción</label>
-                <input type="text" name="descripcion" id="descripcionCat" class="form-control" placeholder="Descripción" required maxlength="255">
+        </div>
+        
+        <!-- Filtros y estadísticas -->
+        <div class="filter-card animate-fade-in">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h5><i class="fas fa-filter me-2"></i>Filtros y Búsqueda</h5>
+                <button class="btn btn-success" data-bs-toggle="modal" data-bs-target="#createModal">
+                    <i class="fas fa-plus me-2"></i>Nueva Categoría
+                </button>
             </div>
-            <div class="d-flex gap-2 justify-content-end">
-                <button type="submit" name="crear_categoria" class="btn btn-success">Guardar</button>
-                <button type="button" class="btn btn-secondary" id="btnCancelarFormCat">Cancelar</button>
+            <div class="row align-items-end">
+                <div class="col-md-6">
+                    <label for="filtroInput" class="form-label">Buscar por nombre:</label>
+                    <div class="input-group">
+                        <span class="input-group-text"><i class="fas fa-search"></i></span>
+                        <input type="text" id="filtroInput" class="form-control" placeholder="Filtrar por nombre de categoría" value="<?= htmlspecialchars($filtro) ?>">
+                        <button class="btn btn-primary" onclick="aplicarFiltro()">
+                            <i class="fas fa-search me-1"></i>Buscar
+                        </button>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <button class="btn btn-outline-secondary w-100" onclick="limpiarFiltro()">
+                        <i class="fas fa-times me-1"></i>Limpiar
+                    </button>
+                </div>
+                <div class="col-md-3">
+                    <div class="stats-card text-center">
+                        <small class="text-muted">Total Categorías</small>
+                        <div class="h4 mb-0"><?php echo $result->num_rows; ?></div>
+                    </div>
+                </div>
             </div>
-        </form>
+        </div>
+        
+        <!-- Tabla de categorías -->
+        <div class="table-card animate-fade-in">
+            <div class="table-responsive">
+                <table class="table table-hover mb-0">
+                    <thead style="background: linear-gradient(135deg, var(--primary-color), var(--secondary-color)); color: white;">
+                        <tr>
+                            <th><i class="fas fa-hashtag me-1"></i>ID</th>
+                            <th><i class="fas fa-tag me-1"></i>Nombre</th>
+                            <th><i class="fas fa-align-left me-1"></i>Descripción</th>
+                            <th><i class="fas fa-cogs me-1"></i>Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                    <?php while($row = $result->fetch_assoc()): ?>
+                        <tr>
+                            <td><span class="badge bg-primary"><?= $row['id_categ'] ?></span></td>
+                            <td>
+                                <strong><?= htmlspecialchars($row['nombre']) ?></strong>
+                            </td>
+                            <td><?= htmlspecialchars($row['descripcion']) ?></td>
+                            <td>
+                                <div class="btn-group" role="group">
+                                    <button type="button" class="btn btn-outline-primary btn-action" 
+                                            onclick="editarCategoria(<?= $row['id_categ'] ?>, '<?= addslashes($row['nombre']) ?>', '<?= addslashes($row['descripcion']) ?>')"
+                                            title="Editar Categoría">
+                                        <i class="fas fa-edit"></i>
+                                    </button>
+                                    
+                                    <?php if ($_SESSION['rol'] !== 'auxiliar'): ?>
+                                    <button type="button" class="btn btn-outline-danger btn-action"
+                                            onclick="confirmarEliminar(<?= $row['id_categ'] ?>, '<?= addslashes($row['nombre']) ?>')"
+                                            title="Eliminar Categoría">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                    <?php endif; ?>
+                                </div>
+                            </td>
+                        </tr>
+                    <?php endwhile; ?>
+                    </tbody>
+                                </table>
+                            </div>
+                            <div class="mt-4 text-center">
+                                <button class="btn btn-success btn-lg mb-3" id="btnMostrarFormCat">Crear nueva categoría</button>
+                                <form method="POST" id="formCrearCat" class="p-4 rounded shadow-sm bg-white mx-auto border" style="max-width: 600px; display:none;">
+                                    <h4 class="mb-3 text-center text-primary fw-semibold">Crear nueva categoría</h4>
+                                    <div class="mb-3">
+                                        <label for="nombreCat" class="form-label">Nombre</label>
+                                        <input type="text" name="nombre" id="nombreCat" class="form-control" placeholder="Nombre de la categoría" required maxlength="100">
+                                    </div>
+                                    <div class="mb-3">
+                                        <label for="descripcionCat" class="form-label">Descripción</label>
+                                        <input type="text" name="descripcion" id="descripcionCat" class="form-control" placeholder="Descripción" required maxlength="255">
+                                    </div>
+                                    <div class="d-flex gap-2 justify-content-end">
+                                        <button type="submit" name="crear_categoria" class="btn btn-success">Guardar</button>
+                                        <button type="button" class="btn btn-secondary" id="btnCancelarFormCat">Cancelar</button>
+                                    </div>
+                                </form>
+                                <?php if ($editCategoria): ?>
+                                <form method="POST" id="formModificarCat" class="p-4 rounded shadow-sm bg-white mx-auto border mt-4" style="max-width: 600px;">
+                                    <h4 class="mb-3 text-center text-warning fw-semibold">Modificar categoría</h4>
+                                    <input type="hidden" name="id_categ" value="<?= $editCategoria['id_categ'] ?>">
+                                    <div class="mb-3">
+                                        <label for="nombreCatEdit" class="form-label">Nombre</label>
+                                        <input type="text" name="nombre" id="nombreCatEdit" class="form-control" value="<?= htmlspecialchars($editCategoria['nombre']) ?>" required maxlength="100">
+                                    </div>
+                                    <div class="mb-3">
+                                        <label for="descripcionCatEdit" class="form-label">Descripción</label>
+                                        <input type="text" name="descripcion" id="descripcionCatEdit" class="form-control" value="<?= htmlspecialchars($editCategoria['descripcion']) ?>" required maxlength="255">
+                                    </div>
+                                    <div class="d-flex gap-2 justify-content-end">
+                                        <button type="submit" name="modificar_categoria" class="btn btn-warning">Actualizar</button>
+                                        <a href="categorias.php" class="btn btn-secondary">Cancelar</a>
+                                    </div>
+                                </form>
+                                <?php endif; ?>
+                            </div>
+                            <?php if(isset($errorMsg)): ?>
+                            <div class="alert alert-warning alert-dismissible fade show mt-3" role="alert" style="max-width:600px;margin:auto;">
+                                <strong><i class="bi bi-exclamation-triangle-fill"></i> Atención:</strong> <?= htmlspecialchars($errorMsg) ?> <br>
+                                <span>Por favor, elimine primero las subcategorías asociadas.</span>
+                                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Cerrar"></button>
+                            </div>
+                            <?php endif; ?>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <script>
+                document.getElementById('btnMostrarFormCat').onclick = function() {
+                    document.getElementById('formCrearCat').style.display = 'block';
+                    this.style.display = 'none';
+                };
+                document.getElementById('btnCancelarFormCat').onclick = function() {
+                    document.getElementById('formCrearCat').reset();
+                    document.getElementById('formCrearCat').style.display = 'none';
+                    document.getElementById('btnMostrarFormCat').style.display = 'inline-block';
+                };
+            </script>
+        </main>
     </div>
     <script>
         document.getElementById('btnMostrarFormCat').onclick = function() {
@@ -230,6 +452,155 @@ if (isset($_GET['modificar'])) {
             document.getElementById('btnMostrarFormCat').style.display = 'inline-block';
         };
     </script>
-</div>
+
+    <!-- Modal para crear categoría -->
+    <div class="modal fade" id="createModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header" style="background: linear-gradient(135deg, var(--primary-color), var(--secondary-color)); color: white;">
+                    <h5 class="modal-title">
+                        <i class="fas fa-plus-circle me-2"></i>Nueva Categoría
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <form method="POST">
+                    <div class="modal-body">
+                        <div class="mb-3">
+                            <label for="nombreCat" class="form-label">
+                                <i class="fas fa-tag me-1"></i>Nombre de la Categoría
+                            </label>
+                            <input type="text" name="nombre" id="nombreCat" class="form-control" 
+                                   placeholder="Ej: Calzado Deportivo" required maxlength="100">
+                        </div>
+                        <div class="mb-3">
+                            <label for="descripcionCat" class="form-label">
+                                <i class="fas fa-align-left me-1"></i>Descripción
+                            </label>
+                            <textarea name="descripcion" id="descripcionCat" class="form-control" rows="3"
+                                    placeholder="Descripción detallada de la categoría" required maxlength="255"></textarea>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                        <button type="submit" name="crear_categoria" class="btn btn-success">
+                            <i class="fas fa-save me-2"></i>Guardar
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal para editar categoría -->
+    <div class="modal fade" id="editModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header" style="background: linear-gradient(135deg, #ffc107, #ff8f00); color: white;">
+                    <h5 class="modal-title">
+                        <i class="fas fa-edit me-2"></i>Editar Categoría
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <form method="POST" id="editForm">
+                    <div class="modal-body">
+                        <input type="hidden" name="id_categ" id="editId">
+                        <div class="mb-3">
+                            <label for="editNombre" class="form-label">
+                                <i class="fas fa-tag me-1"></i>Nombre de la Categoría
+                            </label>
+                            <input type="text" name="nombre" id="editNombre" class="form-control" required maxlength="100">
+                        </div>
+                        <div class="mb-3">
+                            <label for="editDescripcion" class="form-label">
+                                <i class="fas fa-align-left me-1"></i>Descripción
+                            </label>
+                            <textarea name="descripcion" id="editDescripcion" class="form-control" rows="3" required maxlength="255"></textarea>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                        <button type="submit" name="modificar_categoria" class="btn btn-warning">
+                            <i class="fas fa-save me-2"></i>Actualizar
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal de confirmación de eliminación -->
+    <div class="modal fade" id="deleteModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header bg-danger text-white">
+                    <h5 class="modal-title">
+                        <i class="fas fa-exclamation-triangle me-2"></i>Confirmar Eliminación
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="text-center">
+                        <i class="fas fa-trash-alt fa-3x text-danger mb-3"></i>
+                        <p>¿Está seguro de que desea eliminar la categoría?</p>
+                        <div class="alert alert-warning">
+                            <i class="fas fa-info-circle me-2"></i>
+                            <strong>Categoría:</strong> <span id="categoryName"></span>
+                        </div>
+                        <p class="text-muted">Esta acción no se puede deshacer.</p>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="button" class="btn btn-danger" id="confirmDelete">
+                        <i class="fas fa-trash me-2"></i>Eliminar
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let categoryToDelete = null;
+        
+        // Función para aplicar filtro
+        function aplicarFiltro() {
+            const filtro = document.getElementById('filtroInput').value;
+            window.location.href = `categorias.php?filtro=${encodeURIComponent(filtro)}`;
+        }
+        
+        // Función para limpiar filtro
+        function limpiarFiltro() {
+            window.location.href = 'categorias.php';
+        }
+        
+        // Función para editar categoría
+        function editarCategoria(id, nombre, descripcion) {
+            document.getElementById('editId').value = id;
+            document.getElementById('editNombre').value = nombre;
+            document.getElementById('editDescripcion').value = descripcion;
+            new bootstrap.Modal(document.getElementById('editModal')).show();
+        }
+        
+        // Función para confirmar eliminación
+        function confirmarEliminar(id, nombre) {
+            categoryToDelete = id;
+            document.getElementById('categoryName').textContent = nombre;
+            new bootstrap.Modal(document.getElementById('deleteModal')).show();
+        }
+        
+        // Procesar eliminación
+        document.getElementById('confirmDelete').addEventListener('click', function() {
+            if (categoryToDelete) {
+                window.location.href = `categorias.php?eliminar=${categoryToDelete}`;
+            }
+        });
+        
+        // Enter en filtro
+        document.getElementById('filtroInput').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                aplicarFiltro();
+            }
+        });
+    </script>
 </body>
 </html>

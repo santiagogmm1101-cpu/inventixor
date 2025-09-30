@@ -1,6 +1,41 @@
 <?php
 require_once __DIR__ . '/../../config/db.php';
 class Alerta {
+    /**
+     * Registra una alerta en la tabla Alertas
+     * @param array $data
+     * Campos requeridos: tipo_alerta, observacion, nivel_alerta, estado, id_prod
+     */
+    public static function registrarAlerta($data) {
+        require_once __DIR__ . '/../helpers/Database.php';
+        $db = new Database();
+        $conn = $db->conn;
+        $tipo_alerta = $conn->real_escape_string($data['tipo_alerta']);
+        $observacion = $conn->real_escape_string($data['observacion']);
+        $nivel_alerta = $conn->real_escape_string($data['nivel_alerta']);
+        $estado = $conn->real_escape_string($data['estado']);
+        $id_prod = intval($data['id_prod']);
+        $fecha_generacion = date('Y-m-d');
+        $sql = "INSERT INTO Alertas (tipo_alerta, observacion, nivel_alerta, fecha_generacion, estado, id_prod) VALUES (?,?,?,?,?,?)";
+        $stmt = $conn->prepare($sql);
+        if ($stmt) {
+            $stmt->bind_param('sssssi', $tipo_alerta, $observacion, $nivel_alerta, $fecha_generacion, $estado, $id_prod);
+            $stmt->execute();
+            $stmt->close();
+        } else {
+            error_log('Error al preparar el statement para registrar alerta: ' . $conn->error);
+        }
+    }
+    public static function registrarRetorno($data) {
+        global $conn;
+        $id_prod = intval($data['id_prod']);
+        $motivo = $conn->real_escape_string($data['motivo']);
+        $usuario = $conn->real_escape_string($data['usuario']);
+        $tipo = 'retorno';
+        $destinatarios = json_encode($data['destinatarios']);
+        $sql = "INSERT INTO Alertas (id_prod, motivo, usuario, tipo, destinatarios, fecha) VALUES ($id_prod, '$motivo', '$usuario', '$tipo', '$destinatarios', NOW())";
+        $conn->query($sql);
+    }
     public static function getAll() {
         global $conn;
         $sql = "SELECT * FROM Alertas";

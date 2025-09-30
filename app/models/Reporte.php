@@ -1,6 +1,15 @@
 <?php
 require_once __DIR__ . '/../../config/db.php';
 class Reporte {
+    public static function registrarReporte($nombre, $descripcion, $num_doc, $id_nit, $id_prod, $id_alerta = null) {
+        global $conn;
+        $sql = "INSERT INTO Reportes (nombre, descripcion, fecha_hora, num_doc, id_nit, id_prod, id_alerta) VALUES (?, ?, NOW(), ?, ?, ?, ?)";
+        $stmt = $conn->prepare($sql);
+        $stmt->bind_param('ssiiii', $nombre, $descripcion, $num_doc, $id_nit, $id_prod, $id_alerta);
+        $ok = $stmt->execute();
+        $stmt->close();
+        return $ok;
+    }
     public static function getAll() {
         global $conn;
         $sql = "SELECT * FROM Reportes";

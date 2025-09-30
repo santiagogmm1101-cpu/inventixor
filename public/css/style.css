@@ -1,5 +1,114 @@
 body {
-    background-color: #b1ceec;
+/* Variables de color por módulo */
+:root {
+    --color-productos: #FFA500;
+    --color-usuarios: #007BFF;
+    --color-proveedores: #28A745;
+    --color-reportes: #DC3545;
+    --color-salidas: #6F42C1;
+    --color-alertas: #FFC107;
+    --btn-radius: 0.7rem;
+    --btn-shadow: 0 2px 8px rgba(0,0,0,0.12);
+    --btn-font: 'Inter', Arial, sans-serif;
+    --btn-size: 1rem;
+    --btn-padding: 0.5rem 1.2rem;
+}
+
+/* Botón base */
+.btn-custom {
+    font-family: var(--btn-font);
+    font-size: var(--btn-size);
+    padding: var(--btn-padding);
+    border-radius: var(--btn-radius);
+    box-shadow: var(--btn-shadow);
+    border: none;
+    transition: all 0.2s cubic-bezier(.4,0,.2,1);
+    font-weight: 500;
+    letter-spacing: 0.5px;
+    outline: none;
+}
+.btn-productos { background: var(--color-productos); color: #fff; }
+.btn-usuarios { background: var(--color-usuarios); color: #fff; }
+.btn-proveedores { background: var(--color-proveedores); color: #fff; }
+.btn-reportes { background: var(--color-reportes); color: #fff; }
+.btn-salidas { background: var(--color-salidas); color: #fff; }
+.btn-alertas { background: var(--color-alertas); color: #232b32; }
+
+/* Hover y focus */
+.btn-custom:hover, .btn-custom:focus {
+    filter: brightness(0.92);
+    box-shadow: 0 4px 16px rgba(0,0,0,0.18);
+    transform: translateY(-2px) scale(1.04);
+}
+
+/* Tipografía y textos */
+.main-title, h1, h2, h3 {
+    font-family: 'Inter', Arial, sans-serif;
+    font-weight: 700;
+    letter-spacing: 1px;
+    margin-bottom: 1rem;
+}
+.section-title {
+    font-size: 1.5rem;
+    font-weight: 600;
+    color: #232b32;
+    margin-bottom: 1rem;
+}
+.text-module-productos { color: var(--color-productos); }
+.text-module-usuarios { color: var(--color-usuarios); }
+.text-module-proveedores { color: var(--color-proveedores); }
+.text-module-reportes { color: var(--color-reportes); }
+.text-module-salidas { color: var(--color-salidas); }
+.text-module-alertas { color: var(--color-alertas); }
+
+/* Responsive */
+@media (max-width: 768px) {
+    .main-title, h1, h2, h3 { font-size: 2rem; }
+    .section-title { font-size: 1.2rem; }
+    .btn-custom { font-size: 0.95rem; padding: 0.45rem 1rem; }
+    .container, .container-fluid { border-radius: 8px; }
+}
+
+/* Mensajes visuales */
+.alert-custom {
+    border-radius: 0.7rem;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.10);
+    font-family: var(--btn-font);
+    font-size: 1rem;
+    padding: 0.8rem 1.2rem;
+    margin-bottom: 1rem;
+}
+.alert-productos { background: #fff3e0; color: var(--color-productos); }
+.alert-usuarios { background: #e3f2fd; color: var(--color-usuarios); }
+.alert-proveedores { background: #e9f7ef; color: var(--color-proveedores); }
+.alert-reportes { background: #f8d7da; color: var(--color-reportes); }
+.alert-salidas { background: #ede7f6; color: var(--color-salidas); }
+.alert-alertas { background: #fffde7; color: var(--color-alertas); }
+
+/* Accesibilidad */
+.btn-custom:focus-visible {
+    outline: 2px solid #232b32;
+    outline-offset: 2px;
+}
+
+/* Animaciones suaves */
+.fade-in {
+    animation: fadeIn 0.7s cubic-bezier(.4,0,.2,1);
+}
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: none; }
+}
+    min-height: 100vh;
+    background: linear-gradient(120deg, #e3e6e8 0%, #cfd8dc 100%);
+    font-family: 'Inter', Arial, sans-serif;
+    font-size: 1.05rem;
+    color: #232b32;
+}
+.container-fluid, .content, .container {
+    background: #f7f9fa !important;
+    border-radius: 14px;
+    box-shadow: 0 4px 18px rgba(60,72,88,0.10);
 }
 .sidebar {
     min-height: 100vh;
@@ -8,10 +117,14 @@ body {
 .card {
     box-shadow: 0 2px 8px rgba(0,0,0,0.08);
 }
-.card-title {
+.card-title, .sidebar-menu a, .sidebar-menu li, .table th, .table td {
     font-size: 1.1rem;
+    font-family: 'Inter', Arial, sans-serif;
 }
-.display-6 {
+.display-6, .main-title, h1, h2, h3 {
     font-size: 2.5rem;
     font-weight: bold;
+    font-family: 'Inter', Arial, sans-serif;
+    color: #2563eb;
+    letter-spacing: 1px;
 }

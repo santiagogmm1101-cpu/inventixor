@@ -1,8 +1,29 @@
+-- ...otras tablas...
+
+-- Tabla Users
+DROP TABLE IF EXISTS Users;
+CREATE TABLE Users (
+    num_doc BIGINT PRIMARY KEY,
+    tipo_documento INT,
+    apellidos VARCHAR(100),
+    nombres VARCHAR(100),
+    telefono BIGINT,
+    correo VARCHAR(100),
+    cargo VARCHAR(50),
+    rol VARCHAR(20),
+    contrasena VARCHAR(255)
+);
+
+-- Usuarios de ejemplo para pruebas de roles y autorizaciones
+INSERT INTO Users (num_doc, tipo_documento, apellidos, nombres, telefono, correo, cargo, rol, contrasena) VALUES
+    (1001, 1, 'Admin', 'Inventixor', 3001112233, 'admin@inventixor.com', 'Administrador General', 'admin', '$2y$10$adminhash'),
+    (1002, 1, 'Coordinador', 'Inventixor', 3002223344, 'coordinador@inventixor.com', 'Coordinador de Inventario', 'coordinador', '$2y$10$coordhash');
 -- Base de datos: inventixor
 CREATE DATABASE IF NOT EXISTS inventixor;
 USE inventixor;
 
 -- Tabla Categoria
+DROP TABLE IF EXISTS Categoria;
 CREATE TABLE Categoria (
     id_categ INT AUTO_INCREMENT PRIMARY KEY,
     nombre VARCHAR(100) NOT NULL,
@@ -10,6 +31,7 @@ CREATE TABLE Categoria (
 );
 
 -- Tabla Subcategoria
+DROP TABLE IF EXISTS Subcategoria;
 CREATE TABLE Subcategoria (
     id_subcg INT AUTO_INCREMENT PRIMARY KEY,
     nombre VARCHAR(100) NOT NULL,
@@ -19,6 +41,7 @@ CREATE TABLE Subcategoria (
 );
 
 -- Tabla Proveedores
+DROP TABLE IF EXISTS Proveedores;
 CREATE TABLE Proveedores (
     id_nit INT AUTO_INCREMENT PRIMARY KEY,
     razon_social VARCHAR(100) NOT NULL,
@@ -31,6 +54,7 @@ CREATE TABLE Proveedores (
 );
 
 -- Tabla Users
+DROP TABLE IF EXISTS Users;
 CREATE TABLE Users (
     num_doc BIGINT PRIMARY KEY,
     tipo_documento INT,
@@ -44,6 +68,7 @@ CREATE TABLE Users (
 );
 
 -- Tabla Productos
+DROP TABLE IF EXISTS Productos;
 CREATE TABLE Productos (
     id_prod INT AUTO_INCREMENT PRIMARY KEY,
     nombre VARCHAR(100) NOT NULL,
@@ -62,6 +87,7 @@ CREATE TABLE Productos (
 );
 
 -- Tabla Alertas
+DROP TABLE IF EXISTS Alertas;
 CREATE TABLE Alertas (
     id_alerta INT AUTO_INCREMENT PRIMARY KEY,
     tipo_alerta VARCHAR(100),
@@ -74,6 +100,7 @@ CREATE TABLE Alertas (
 );
 
 -- Tabla Salidas
+DROP TABLE IF EXISTS Salidas;
 CREATE TABLE Salidas (
     id_salida INT AUTO_INCREMENT PRIMARY KEY,
     tipo_salida VARCHAR(100),
@@ -85,6 +112,7 @@ CREATE TABLE Salidas (
 );
 
 -- Tabla Reportes
+DROP TABLE IF EXISTS Reportes;
 CREATE TABLE Reportes (
     id_repor INT AUTO_INCREMENT PRIMARY KEY,
     nombre VARCHAR(100),
@@ -98,4 +126,20 @@ CREATE TABLE Reportes (
     FOREIGN KEY (id_nit) REFERENCES Proveedores(id_nit),
     FOREIGN KEY (id_prod) REFERENCES Productos(id_prod),
     FOREIGN KEY (id_alerta) REFERENCES Alertas(id_alerta)
+);
+
+-- Tabla Autorizaciones
+DROP TABLE IF EXISTS Autorizaciones;
+CREATE TABLE IF NOT EXISTS Autorizaciones (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    modulo VARCHAR(50) NOT NULL,
+    id_registro INT NOT NULL,
+    usuario_solicita BIGINT NOT NULL,
+    usuario_autoriza BIGINT,
+    estado VARCHAR(20) DEFAULT 'pendiente',
+    fecha_solicitud DATETIME DEFAULT CURRENT_TIMESTAMP,
+    fecha_respuesta DATETIME,
+    comentario VARCHAR(255),
+    FOREIGN KEY (usuario_solicita) REFERENCES Users(num_doc),
+    FOREIGN KEY (usuario_autoriza) REFERENCES Users(num_doc)
 );
